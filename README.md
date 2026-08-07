@@ -125,19 +125,6 @@ Supabase stores
 - Billing Records
 - Medication Reminders
 
----
-
-# 📸 Screenshots
-
-(Add screenshots here)
-
----
-
-# ▶ Demo
-
-(Add your demo video link)
-
----
 
 # 👩‍💻 Author
 
