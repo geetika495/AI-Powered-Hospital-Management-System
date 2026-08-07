@@ -1,0 +1,707 @@
+{
+  "name": "AI Doctor Approval System",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "AI Doctor Approval System",
+        "formDescription": "Review the AI-generated patient care plan and record your decision.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Reminder ID",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Doctor Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Approval Decision",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Approve"
+                  },
+                  {
+                    "option": "Reject"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Doctor Comments",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1cef45b3-5cf4-442c-af93-247dba557c5f",
+      "name": "Doctor Approval Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -1696,
+        192
+      ],
+      "webhookId": "585aaa73-bce7-4c3f-b448-5ebe3659166b"
+    },
+    {
+      "parameters": {
+        "useCustomSchema": true,
+        "operation": "getAll",
+        "tableId": "medication_reminders",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "reminder_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Doctor Approval Form').item.json['Reminder ID'] }}"
+            }
+          ]
+        }
+      },
+      "id": "0cbb1c55-8a4e-48ee-a368-91cdcb6132f6",
+      "name": "Get Reminder Record",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1472,
+        192
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-reminder",
+              "leftValue": "={{ $json.reminder_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fe9b53dc-c8be-4c22-b43d-4d24bc61c4a9",
+      "name": "Reminder Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1248,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "medical_reports",
+        "limit": 1,
+        "orderBy": "uploaded_at.desc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Reminder Record').item.json.patient_id }}"
+            }
+          ]
+        }
+      },
+      "id": "18d2080e-0578-421a-97be-8898478c783a",
+      "name": "Get Latest Medical Report",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Doctor Approval Form').item.json['Doctor Name'] }}",
+        "subject": "Reminder ID not found",
+        "emailType": "text",
+        "message": "=Dear Dr. {{ $('Doctor Approval Form').item.json['Doctor Name'] }},\n\nReminder ID not found.\n\nThe Reminder ID \"{{ $('Doctor Approval Form').item.json['Reminder ID'] }}\" could not be located in the system. Please verify the ID and try again.\n\nAI Doctor Approval System",
+        "options": {}
+      },
+      "id": "7bbeea96-4d36-45f1-9695-fd5359636d5a",
+      "name": "Email Doctor - Not Found",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -1024,
+        288
+      ],
+      "webhookId": "ed6265c2-9143-45dd-a7e9-461f1689e9c5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI Clinical Decision Support Assistant working inside a hospital.\n\nYour role is ONLY to assist the doctor.\n\nPatient Name:\n{{ $('Get Reminder Record').item.json.patient_name }}\n\nAge:\n{{ $('Get Reminder Record').item.json.age }}\n\nGender:\n{{ $('Get Reminder Record').item.json.gender }}\n\nDiagnosis:\n{{ $('Get Latest Medical Report').item.json.diagnosis }}\n\nSeverity:\n{{ $('Get Latest Medical Report').item.json.severity }}\n\nAI Medical Summary:\n{{ $('Get Latest Medical Report').item.json.ai_summary }}\n\nDoctor Decision:\n{{ $('Doctor Approval Form').item.json[\"Approval Decision\"] }}\n\nDoctor Comments:\n{{ $('Doctor Approval Form').item.json[\"Doctor Comments\"] }}\n\nReturn ONLY JSON.\n\n{\n  \"ai_recommendation\":\"\",\n  \"ai_confidence\":\"\",\n  \"ai_reason\":\"\",\n  \"risk_level\":\"\",\n  \"patient_advice\":\"\"\n}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a professional Clinical Decision Support AI. Never prescribe medicines. Only provide recommendations for the doctor. Return valid JSON only."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "8fc88cad-20d3-4f89-a33f-3b5bd7e42358",
+      "name": "Clinical Decision Support (Gemini)",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -800,
+        96
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const response = $json.text;\n\nconst cleaned = response\n.replace(/```json/g,\"\")\n.replace(/```/g,\"\")\n.trim();\n\nreturn {\n  json: JSON.parse(cleaned)\n};"
+      },
+      "id": "9505329f-8fa3-4160-8837-a68bd421fdf2",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "decision-approve",
+              "leftValue": "={{ $('Doctor Approval Form').item.json['Approval Decision'] }}",
+              "rightValue": "Approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7ba010a2-c3f6-4645-8518-51dc45ded150",
+      "name": "Doctor Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "medication_reminders",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "reminder_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Reminder Record').item.json.reminder_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "Approved"
+            },
+            {
+              "fieldId": "doctor_name",
+              "fieldValue": "={{ $('Doctor Approval Form').item.json['Doctor Name'] }}"
+            },
+            {
+              "fieldId": "doctor_comments",
+              "fieldValue": "={{ $('Doctor Approval Form').item.json['Doctor Comments'] }}"
+            },
+            {
+              "fieldId": "ai_recommendation",
+              "fieldValue": "={{ $('Parse AI Response').item.json.ai_recommendation }}"
+            },
+            {
+              "fieldId": "ai_confidence",
+              "fieldValue": "={{ $('Parse AI Response').item.json.ai_confidence }}"
+            },
+            {
+              "fieldId": "risk_level",
+              "fieldValue": "={{ $('Parse AI Response').item.json.risk_level }}"
+            },
+            {
+              "fieldId": "approved_at",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "c0ae000c-d686-42db-9830-5307c63ef363",
+      "name": "Update Reminder - Approved",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$('Get Reminder Record').item.json.email}}",
+        "subject": "Your Care Plan Has Been Approved",
+        "message": "=<div style=\"font-family:Arial,sans-serif;color:#333;max-width:600px;margin:auto;\"><h2 style=\"color:#2e7d32;\">Your Care Plan Has Been Approved</h2><p>Dear {{ $('Get Reminder Record').item.json.patient_name }},</p><p>Your care plan has been reviewed and <strong>approved</strong> by your doctor.</p><table style=\"width:100%;border-collapse:collapse;\"><tr><td style=\"padding:8px;border-bottom:1px solid #eee;\"><strong>Doctor</strong></td><td style=\"padding:8px;border-bottom:1px solid #eee;\">{{ $('Doctor Approval Form').item.json['Doctor Name'] }}</td></tr><tr><td style=\"padding:8px;border-bottom:1px solid #eee;\"><strong>Approved Care Plan</strong></td><td style=\"padding:8px;border-bottom:1px solid #eee;\">{{ $('Get Reminder Record').item.json.ai_care_plan }}</td></tr><tr><td style=\"padding:8px;border-bottom:1px solid #eee;\"><strong>Diet Advice</strong></td><td style=\"padding:8px;border-bottom:1px solid #eee;\">{{ $('Get Reminder Record').item.json.diet_advice }}</td></tr><tr><td style=\"padding:8px;border-bottom:1px solid #eee;\"><strong>Exercise Advice</strong></td><td style=\"padding:8px;border-bottom:1px solid #eee;\">{{ $('Get Reminder Record').item.json.exercise_advice }}</td></tr><tr><td style=\"padding:8px;border-bottom:1px solid #eee;\"><strong>Precautions</strong></td><td style=\"padding:8px;border-bottom:1px solid #eee;\">{{ $('Get Reminder Record').item.json.precautions }}</td></tr><tr><td style=\"padding:8px;border-bottom:1px solid #eee;\"><strong>Follow-up Date</strong></td><td style=\"padding:8px;border-bottom:1px solid #eee;\">{{ $('Get Reminder Record').item.json.followup_date }}</td></tr><tr><td style=\"padding:8px;border-bottom:1px solid #eee;\"><strong>Doctor Comments</strong></td><td style=\"padding:8px;border-bottom:1px solid #eee;\">{{ $('Doctor Approval Form').item.json['Doctor Comments'] }}</td></tr></table><p style=\"margin-top:20px;\">Please follow the plan above and contact your clinic if you have any questions.</p><p>Warm regards,<br/>Your Care Team</p></div>",
+        "options": {}
+      },
+      "id": "994a43cc-1d7b-4075-b6c1-e79ea92e7081",
+      "name": "Email Patient - Approved",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "webhookId": "323e8e73-1a32-47c6-84cf-ae48a2776acd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "workflow_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "log_id",
+              "fieldValue": "={{ $now.toMillis() }}"
+            },
+            {
+              "fieldId": "workflow_name",
+              "fieldValue": "AI Doctor Approval System"
+            },
+            {
+              "fieldId": "patient_id",
+              "fieldValue": "={{ $('Get Reminder Record').item.json.patient_id }}"
+            },
+            {
+              "fieldId": "reminder_id",
+              "fieldValue": "={{ $('Get Reminder Record').item.json.reminder_id }}"
+            },
+            {
+              "fieldId": "doctor_name",
+              "fieldValue": "={{ $('Doctor Approval Form').item.json['Doctor Name'] }}"
+            },
+            {
+              "fieldId": "action",
+              "fieldValue": "Approve"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "Approved"
+            },
+            {
+              "fieldId": "timestamp",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "3ac8cf9d-26a9-4186-802a-116dcedce8e3",
+      "name": "Log - Approved",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "medication_reminders",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "reminder_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Reminder Record').item.json.reminder_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "Rejected"
+            },
+            {
+              "fieldId": "rejection_comments",
+              "fieldValue": "={{ $('Doctor Approval Form').item.json['Doctor Comments'] }}"
+            },
+            {
+              "fieldId": "doctor_name",
+              "fieldValue": "={{ $('Doctor Approval Form').item.json['Doctor Name'] }}"
+            },
+            {
+              "fieldId": "rejection_timestamp",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "0aeb3eaa-e685-4470-959c-57fb2ced3831",
+      "name": "Update Reminder - Rejected",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        192
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get Latest Medical Report').item.json.email }}",
+        "subject": "Your Care Plan Requires Further Review",
+        "message": "=<div style=\"font-family:Arial,sans-serif;color:#333;max-width:600px;margin:auto;\"><h2 style=\"color:#c62828;\">Your Care Plan Requires Further Review</h2><p>Dear {{ $('Get Reminder Record').item.json.patient_name }},</p><p>After careful review, your doctor has determined that your care plan requires further review before it can be finalised.</p><p>Your care team will be in touch with next steps. No action is required from you at this time.</p><p>Warm regards,<br/>Your Care Team</p></div>",
+        "options": {}
+      },
+      "id": "cf80c17f-dc31-4933-98a3-f26151b172e1",
+      "name": "Email Patient - Rejected",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        192
+      ],
+      "webhookId": "01371019-e00c-4cb6-af53-81571e1f54fd",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "workflow_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "log_id",
+              "fieldValue": "={{ $now.toMillis() }}"
+            },
+            {
+              "fieldId": "workflow_name",
+              "fieldValue": "AI Doctor Approval System"
+            },
+            {
+              "fieldId": "patient_id",
+              "fieldValue": "={{ $('Get Reminder Record').item.json.patient_id }}"
+            },
+            {
+              "fieldId": "reminder_id",
+              "fieldValue": "={{ $('Get Reminder Record').item.json.reminder_id }}"
+            },
+            {
+              "fieldId": "doctor_name",
+              "fieldValue": "={{ $('Doctor Approval Form').item.json['Doctor Name'] }}"
+            },
+            {
+              "fieldId": "action",
+              "fieldValue": "Reject"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "Rejected"
+            },
+            {
+              "fieldId": "timestamp",
+              "fieldValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "f95c9f95-598a-4f1e-a7d5-4e058bb792c1",
+      "name": "Log - Rejected",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        448,
+        192
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -784,
+        304
+      ],
+      "id": "0de722d7-06fe-45f5-992c-747fe6d98871",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "W1ALumDJHEWVOatf",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Doctor Approval Form": {
+      "main": [
+        [
+          {
+            "node": "Get Reminder Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Reminder Record": {
+      "main": [
+        [
+          {
+            "node": "Reminder Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reminder Exists?": {
+      "main": [
+        [
+          {
+            "node": "Get Latest Medical Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Doctor - Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Latest Medical Report": {
+      "main": [
+        [
+          {
+            "node": "Clinical Decision Support (Gemini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clinical Decision Support (Gemini)": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Doctor Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Doctor Approved?": {
+      "main": [
+        [
+          {
+            "node": "Update Reminder - Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Reminder - Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Reminder - Approved": {
+      "main": [
+        [
+          {
+            "node": "Email Patient - Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Patient - Approved": {
+      "main": [
+        [
+          {
+            "node": "Log - Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Reminder - Rejected": {
+      "main": [
+        [
+          {
+            "node": "Email Patient - Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Patient - Rejected": {
+      "main": [
+        [
+          {
+            "node": "Log - Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Clinical Decision Support (Gemini)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "9223d39a-a629-426d-a5b3-8d8fac4ee500",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "580cae93cc976494b5e49db5dbb606b8783cb9a5851e5460e7265cca86def0db"
+  },
+  "nodeGroups": [],
+  "id": "AltfzNApjIDBZ5ub",
+  "tags": []
+}

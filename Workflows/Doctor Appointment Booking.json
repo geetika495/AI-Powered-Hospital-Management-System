@@ -1,0 +1,591 @@
+{
+  "name": "Doctor Appointment Booking",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Doctor Appointment Booking",
+        "formDescription": "Book your appointment with our AI Hospital Management System.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Patient ID",
+              "fieldName": "patient_id",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Symptoms",
+              "fieldType": "textarea",
+              "fieldName": "symptoms"
+            },
+            {
+              "fieldLabel": "Appointment Date",
+              "fieldType": "date",
+              "fieldName": "appointment_date"
+            },
+            {
+              "fieldLabel": "Appointment Time",
+              "fieldType": "dropdown",
+              "fieldName": "appointment_time",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "9:00 AM"
+                  },
+                  {
+                    "option": "10:00 AM"
+                  },
+                  {
+                    "option": "11:00 AM"
+                  },
+                  {
+                    "option": "12:00 PM"
+                  },
+                  {
+                    "option": "2:00 PM"
+                  },
+                  {
+                    "option": "3:00 PM"
+                  },
+                  {
+                    "option": "4:00 PM"
+                  },
+                  {
+                    "option": "5:00 PM"
+                  }
+                ]
+              },
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "61cbee12-6d0c-43d4-b50c-e831683ad980",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        144,
+        96
+      ],
+      "webhookId": "b8f75dc7-0457-4eb3-a90c-16be56e43f02"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an AI hospital triage assistant.\n\nPatient Name:\n{{$node[\"On form submission\"].json.patient_name}}\n\nSymptoms:\n{{$node[\"On form submission\"].json.symptoms}}\n\nBased on the symptoms, determine:\n\n1. Possible condition\n2. Recommended department\n3. Priority (Low, Medium, High)\n\nReturn ONLY valid JSON.\n\n{\n  \"possible_condition\":\"\",\n  \"department\":\"\",\n  \"priority\":\"\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "004619ce-f5bf-4a1b-9a5a-672f941fed16",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        0
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VCUQdZ1UbtfaEOTx",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $json.content.parts[0].text;\n\nconst cleaned = response\n.replace(/```json/g, \"\")\n.replace(/```/g, \"\")\n.trim();\n\nconst ai = JSON.parse(cleaned);\n\nreturn [{\njson:{\npossible_condition: ai.possible_condition,\ndepartment: ai.department,\npriority: ai.priority\n}\n}];"
+      },
+      "id": "174f00dc-eb39-465c-9e13-6194e9eaaff7",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const form = $node[\"On form submission\"].json;\nconst ai = $node[\"Parse AI Response\"].json;\nconst patient = $node[\"Get Patient\"].json;\nconst scheduler = $node[\"Smart Scheduler\"].json;\n\nconst appointmentId =\n  \"APT\" + Date.now() + Math.floor(Math.random() * 1000);\n\nreturn [{\n  json: {\n    appointment_id: appointmentId,\n\n    patient_id: patient.patient_id,\n    patient_name: patient.full_name,\n    email: patient.email,\n\n    symptoms: form.symptoms,\n\n    appointment_date: scheduler.appointment_date,\n    appointment_time: scheduler.appointment_time,\n\n    department: scheduler.department,\n\n    doctor_id: scheduler.doctor_id,\n    doctor: scheduler.doctor_name,\n\n    possible_condition: ai.possible_condition,\n    priority: ai.priority,\n\n    ai_analysis: JSON.stringify(ai),\n\n    status: scheduler.status\n  }\n}];"
+      },
+      "id": "436e4af5-80ec-4ffb-9910-2a67ccf40372",
+      "name": "Generate Appointment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1616,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "appointments",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "appointment_id",
+              "fieldValue": "={{$json.appointment_id}}"
+            },
+            {
+              "fieldId": "patient_id",
+              "fieldValue": "={{$json.patient_id}}"
+            },
+            {
+              "fieldId": "patient_name",
+              "fieldValue": "={{ $('Generate Appointment').item.json.patient_name }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Generate Appointment').item.json.email }}"
+            },
+            {
+              "fieldId": "symptoms",
+              "fieldValue": "={{ $('Generate Appointment').item.json.symptoms }}"
+            },
+            {
+              "fieldId": "appointment_date",
+              "fieldValue": "={{ $('Generate Appointment').item.json.appointment_date }}"
+            },
+            {
+              "fieldId": "appointment_time",
+              "fieldValue": "={{ $('Generate Appointment').item.json.appointment_time }}"
+            },
+            {
+              "fieldId": "department",
+              "fieldValue": "={{ $json.department }}"
+            },
+            {
+              "fieldId": "doctor",
+              "fieldValue": "={{ $('Generate Appointment').item.json.doctor }}"
+            },
+            {
+              "fieldId": "priority",
+              "fieldValue": "={{ $('Generate Appointment').item.json.priority }}"
+            },
+            {
+              "fieldId": "ai_analysis",
+              "fieldValue": "={{ $('Generate Appointment').item.json.ai_analysis }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            }
+          ]
+        }
+      },
+      "id": "5085a5e1-a88d-4bf2-b3f5-367fd4ea58ec",
+      "name": "Create a row",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "Appointment Confirmed",
+        "message": "=<h2>Appointment Confirmed</h2>  <p>Hello <b>{{$json.patient_name}}</b>,</p>  <p>Your appointment has been booked successfully.</p>  <hr>  <b>Appointment ID:</b> {{$json.appointment_id}}  <br><br>  <b>Date:</b> {{$json.appointment_date}}  <br><br>  <b>Time:</b> {{$json.appointment_time}}  <br><br>  <b>Department:</b> {{$json.department}}  <br><br>  <b>Doctor:</b> {{$json.doctor}}  <hr>  <h3>AI Preliminary Assessment</h3>  <b>Possible Condition:</b> {{$json.ai_analysis}}  <hr>  Please arrive 15 minutes before your appointment.\nCLICK HERE FOR THE AI MEDICAL REPORT \nhttps://geetika045.app.n8n.cloud/form/3b7cae77-08c7-471a-8494-abc7d73ec4a3<br><br>  Regards,  AI Hospital Management Team",
+        "options": {}
+      },
+      "id": "67a5b060-0a1b-450c-8bd6-c1f21acefa20",
+      "name": "Send a message1",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2192,
+        0
+      ],
+      "webhookId": "d3dbe00b-79d6-4dc3-ad1b-f1098e5be183",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$node[\"On form submission\"].json.email}}",
+        "subject": "Appointment Booking Failed",
+        "message": "=<h2>Patient Not Found</h2>  <p>Hello {{$node[\"On form submission\"].json.patient_name}},</p>  <p> We could not find your Patient ID in our records. </p>  <p> Please complete the Patient Registration process before booking an appointment. </p>  Regards,<br> AI Hospital Management Team",
+        "options": {}
+      },
+      "id": "631eef29-89e9-44da-8397-4a9852bf20e3",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        240
+      ],
+      "webhookId": "cd7a9b65-6ce9-4857-969d-d872b61f214c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "doctors",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "department",
+              "condition": "eq",
+              "keyValue": "={{ $json.department }}"
+            },
+            {
+              "keyName": "active",
+              "condition": "eq",
+              "keyValue": "true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "9b65101e-a2fa-4acd-b59f-b5625f90731a",
+      "name": "Get Doctors",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "patients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_id",
+              "condition": "eq",
+              "keyValue": "={{$node[\"On form submission\"].json.patient_id}}"
+            }
+          ]
+        }
+      },
+      "id": "bbb4e067-52d9-4a61-ad60-5a92d91f08c7",
+      "name": "Get Patient",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        304,
+        96
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "40b6d988-5855-4773-b4f7-0a89bd363749",
+              "leftValue": "={{$items(\"Get Patient\").length}}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d417c0bb-c98c-4d73-8195-1c8d7328bf8f",
+      "name": "If patient exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const slots = $(\"Get Available Slot\").all().map(item => item.json);\n\nconst form = $(\"On form submission\").first().json;\n\nconst requestedTime = form.appointment_time;\n\n// Hospital slot order\nconst slotOrder = [\n  \"09:00 AM\",\n  \"10:00 AM\",\n  \"11:00 AM\",\n  \"12:00 PM\",\n  \"02:00 PM\",\n  \"03:00 PM\",\n  \"04:00 PM\",\n  \"05:00 PM\"\n];\n\nconst requestedIndex = slotOrder.indexOf(requestedTime);\n\n// Find the first slot at or after the requested time\nconst selectedSlot = slots.find(slot => {\n  return slotOrder.indexOf(slot.slot_time) >= requestedIndex;\n});\n\nif (!selectedSlot) {\n\n  return [{\n    json: {\n      status: \"Waitlisted\",\n      doctor_id: null,\n      doctor_name: null,\n      slot_id: null,\n      appointment_date: form.appointment_date,\n      appointment_time: requestedTime,\n      department: $(\"Parse AI Response\").first().json.department\n    }\n  }];\n\n}\n\nreturn [{\n  json: {\n    status: \"Booked\",\n\n    slot_id: selectedSlot.slot_id,\n\n    doctor_id: selectedSlot.doctor_id,\n\n    doctor_name: selectedSlot.doctor_name,\n\n    department: selectedSlot.department,\n\n    appointment_date: selectedSlot.slot_date,\n\n    appointment_time: selectedSlot.slot_time\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "5a58ea0c-7ec2-4982-b7bb-000b851643f5",
+      "name": "Smart Scheduler"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "doctor_slots",
+        "returnAll": true,
+        "orderBy": "slot_time.asc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "department",
+              "condition": "eq",
+              "keyValue": "={{ $(\"Parse AI Response\").first().json.department }}"
+            },
+            {
+              "keyName": "slot_date",
+              "condition": "eq",
+              "keyValue": "={{ $(\"On form submission\").first().json.appointment_date }}"
+            },
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "=Available"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        0
+      ],
+      "id": "32f3280c-4772-41bb-9614-950c74856fe2",
+      "name": "Get Available Slot",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "doctor_slots",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "slot_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Smart Scheduler').item.json.slot_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "Booked"
+            },
+            {
+              "fieldId": "patient_id",
+              "fieldValue": "={{ $json.patient_id }}"
+            },
+            {
+              "fieldId": "appointment_id",
+              "fieldValue": "={{ $json.appointment_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1824,
+        0
+      ],
+      "id": "9ab849e2-b820-4e24-947f-9d96e0f4f6bc",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Get Patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Get Doctors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Appointment": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Doctors": {
+      "main": [
+        [
+          {
+            "node": "Get Available Slot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Patient": {
+      "main": [
+        [
+          {
+            "node": "If patient exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If patient exists": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Smart Scheduler": {
+      "main": [
+        [
+          {
+            "node": "Generate Appointment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Available Slot": {
+      "main": [
+        [
+          {
+            "node": "Smart Scheduler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1a8c65ab-e9ea-4b5d-8dac-e16fa301e679",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "580cae93cc976494b5e49db5dbb606b8783cb9a5851e5460e7265cca86def0db"
+  },
+  "nodeGroups": [],
+  "id": "5p2i84buSy9Rilwx",
+  "tags": []
+}

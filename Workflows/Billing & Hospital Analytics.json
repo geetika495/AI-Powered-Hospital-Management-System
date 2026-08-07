@@ -1,0 +1,315 @@
+{
+  "name": "Billing & Hospital Analytics",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Hospital Billing Form",
+        "formDescription": "Generate patient bill after doctor approval.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Patient ID",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Consultation Fee",
+              "fieldType": "number",
+              "defaultValue": "500",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Lab Charges",
+              "fieldType": "number",
+              "defaultValue": "1200"
+            },
+            {
+              "fieldLabel": "Medicine Charges",
+              "fieldType": "number",
+              "defaultValue": "850"
+            },
+            {
+              "fieldLabel": "Miscellaneous Charges",
+              "fieldType": "number",
+              "defaultValue": "300"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -528,
+        0
+      ],
+      "id": "2c9214e3-5fb4-476e-8a79-e028f3b0cd9d",
+      "name": "On form submission",
+      "webhookId": "841ce950-9dee-4f7e-aca0-8ce45dc2c39a"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "patients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_id",
+              "condition": "eq",
+              "keyValue": "={{ $('On form submission').item.json[\"Patient ID\"] }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        0
+      ],
+      "id": "62530107-b17d-4ab2-8c37-8ef1a8cb6788",
+      "name": "Get Patient",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const consultation = Number($('On form submission').item.json['Consultation Fee']);\nconst lab = Number($('On form submission').item.json['Lab Charges']);\nconst medicine = Number($('On form submission').item.json['Medicine Charges']);\nconst misc = Number($('On form submission').item.json['Miscellaneous Charges']);\n\nconst subtotal = consultation + lab + medicine + misc;\n\nconst gst = subtotal * 0.18;\n\nconst total = subtotal + gst;\n\nreturn [{\njson:{\nconsultation_fee: consultation,\nlab_fee: lab,\nmedicine_fee: medicine,\nmiscellaneous_fee: misc,\ngst: gst.toFixed(2),\ntotal_amount: total.toFixed(2)\n}\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        0
+      ],
+      "id": "a99c1348-ac7d-43b6-91a7-fc0a58d7ca02",
+      "name": "Calculate Bill"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\njson:{\ninvoice_id: \"INV-\" + Date.now()\n}\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        0
+      ],
+      "id": "36638ad7-ab96-4255-930e-3ffa55e81084",
+      "name": "Generate Invoice ID"
+    },
+    {
+      "parameters": {
+        "tableId": "billing",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "invoice_id",
+              "fieldValue": "={{ $('Generate Invoice ID').item.json.invoice_id }}"
+            },
+            {
+              "fieldId": "patient_id",
+              "fieldValue": "={{ $('On form submission').item.json['Patient ID'] }}"
+            },
+            {
+              "fieldId": "patient_name",
+              "fieldValue": "={{ $('Get Patient').item.json.full_name }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Get Patient').item.json.email }}"
+            },
+            {
+              "fieldId": "doctor_name",
+              "fieldValue": "={{ $json.doctor_name }}"
+            },
+            {
+              "fieldId": "consultation_fee",
+              "fieldValue": "={{ $('On form submission').item.json['Consultation Fee'] }}"
+            },
+            {
+              "fieldId": "lab_fee",
+              "fieldValue": "={{ $('On form submission').item.json['Lab Charges'] }}"
+            },
+            {
+              "fieldId": "medicine_fee",
+              "fieldValue": "={{ $('On form submission').item.json['Medicine Charges'] }}"
+            },
+            {
+              "fieldId": "miscellaneous_fee",
+              "fieldValue": "={{ $('On form submission').item.json['Miscellaneous Charges'] }}"
+            },
+            {
+              "fieldId": "gst",
+              "fieldValue": "={{ $('Calculate Bill').item.json.gst }}"
+            },
+            {
+              "fieldId": "total_amount",
+              "fieldValue": "={{ $('Calculate Bill').item.json.total_amount }}"
+            },
+            {
+              "fieldId": "payment_status",
+              "fieldValue": "=Pending"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        512,
+        0
+      ],
+      "id": "32695e3e-bab0-4dfc-952a-398288e7e593",
+      "name": "billing",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "medication_reminders",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Patient').item.json.patient_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        304,
+        0
+      ],
+      "id": "ad659380-c125-43ab-8a6b-4b4a9aee7348",
+      "name": "Get Doctor name",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "🏥 AI Hospital | Your Billing Invoice",
+        "message": "=<div style=\"font-family:Arial,Helvetica,sans-serif;background:#f4f8fb;padding:30px;\">\n\n  <div style=\"max-width:700px;margin:auto;background:#ffffff;border-radius:12px;padding:35px;border:1px solid #d9e7f5;\">\n\n    <h1 style=\"color:#1E88E5;text-align:center;margin-bottom:5px;\">\n        🏥 AI Hospital\n    </h1>\n\n    <p style=\"text-align:center;color:#777;\">\n        Billing & Payment Summary\n    </p>\n\n    <hr style=\"margin:25px 0;\">\n\n    <h2 style=\"color:#2E7D32;\">\n        Dear {{ $('Get Patient').item.json.full_name }},\n    </h2>\n\n    <p>\n        Your hospital invoice has been successfully generated.\n        Please review your billing summary below.\n    </p>\n\n    <table style=\"width:100%;border-collapse:collapse;margin-top:20px;\">\n\n        <tr style=\"background:#f5f5f5;\">\n            <td style=\"padding:12px;\"><b>Invoice ID</b></td>\n            <td style=\"padding:12px;\">\n                {{ $('Generate Invoice ID').item.json.invoice_id }}\n            </td>\n        </tr>\n\n        <tr>\n            <td style=\"padding:12px;\"><b>Patient ID</b></td>\n            <td style=\"padding:12px;\">\n                {{ $('Get Patient').item.json.patient_id }}\n            </td>\n        </tr>\n\n        <tr style=\"background:#f5f5f5;\">\n            <td style=\"padding:12px;\"><b>Consultation Fee</b></td>\n            <td style=\"padding:12px;\">\n                ₹{{ $('Calculate Bill').item.json.consultation_fee }}\n            </td>\n        </tr>\n\n        <tr>\n            <td style=\"padding:12px;\"><b>Lab Charges</b></td>\n            <td style=\"padding:12px;\">\n                ₹{{ $('Calculate Bill').item.json.lab_fee }}\n            </td>\n        </tr>\n\n        <tr style=\"background:#f5f5f5;\">\n            <td style=\"padding:12px;\"><b>Medicine Charges</b></td>\n            <td style=\"padding:12px;\">\n                ₹{{ $('Calculate Bill').item.json.medicine_fee }}\n            </td>\n        </tr>\n\n        <tr>\n            <td style=\"padding:12px;\"><b>Miscellaneous Charges</b></td>\n            <td style=\"padding:12px;\">\n                ₹{{ $('Calculate Bill').item.json.miscellaneous_fee }}\n            </td>\n        </tr>\n\n        <tr style=\"background:#f5f5f5;\">\n            <td style=\"padding:12px;\"><b>GST (18%)</b></td>\n            <td style=\"padding:12px;\">\n                ₹{{ $('Calculate Bill').item.json.gst }}\n            </td>\n        </tr>\n\n        <tr style=\"background:#E3F2FD;font-size:18px;\">\n            <td style=\"padding:14px;\"><b>Total Amount</b></td>\n            <td style=\"padding:14px;\">\n                <b>₹{{ $('Calculate Bill').item.json.total_amount }}</b>\n            </td>\n        </tr>\n\n        <tr>\n            <td style=\"padding:12px;\"><b>Payment Status</b></td>\n            <td style=\"padding:12px;color:#F57C00;\">\n                <b>Pending</b>\n            </td>\n        </tr>\n\n    </table>\n\n    <div style=\"margin-top:30px;background:#F5F5F5;padding:20px;border-radius:8px;\">\n\n        <h3 style=\"margin-top:0;color:#1565C0;\">\n            Payment Instructions\n        </h3>\n\n        <ul>\n            <li>Please complete your payment before your next appointment.</li>\n            <li>Keep this invoice for future reference.</li>\n            <li>For billing assistance, contact our support desk.</li>\n        </ul>\n\n    </div>\n\n    <br>\n\n    <div style=\"text-align:center;\">\n\n        <h3 style=\"color:#2E7D32;\">\n            Thank you for choosing AI Hospital\n        </h3>\n\n        <p style=\"color:#666;\">\n            Wishing you a speedy recovery.\n        </p>\n\n    </div>\n\n    <hr>\n\n    <p style=\"font-size:12px;color:#888;text-align:center;\">\n        This invoice was generated automatically by the AI Hospital Management System.\n    </p>\n\n  </div>\n\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "237e535e-af31-47ce-9de9-98d422abdfd1",
+      "name": "Hospital Invoice Generated",
+      "webhookId": "5c976bb9-736e-4049-8612-6935993aca69",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Get Patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Patient": {
+      "main": [
+        [
+          {
+            "node": "Calculate Bill",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Bill": {
+      "main": [
+        [
+          {
+            "node": "Generate Invoice ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Invoice ID": {
+      "main": [
+        [
+          {
+            "node": "Get Doctor name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Doctor name": {
+      "main": [
+        [
+          {
+            "node": "billing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "billing": {
+      "main": [
+        [
+          {
+            "node": "Hospital Invoice Generated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d047af9f-1c09-459f-9250-fe0b8322389b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "580cae93cc976494b5e49db5dbb606b8783cb9a5851e5460e7265cca86def0db"
+  },
+  "nodeGroups": [],
+  "id": "XS3Ymwg8xLc7odHy",
+  "tags": []
+}

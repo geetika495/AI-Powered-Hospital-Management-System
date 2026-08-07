@@ -1,0 +1,457 @@
+{
+  "name": "Medication & Follow-up Reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Medication & Follow-up Reminder",
+        "formDescription": "Generate an AI medication plan and schedule follow-up reminders for the patient.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Patient ID",
+              "placeholder": "PAT1001",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Doctor Name",
+              "placeholder": "Dr. Sharma",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Doctor Notes",
+              "fieldType": "textarea",
+              "placeholder": "Patient should avoid oily food and drink plenty of water.",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Follow-up Date",
+              "fieldType": "date",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "33dccd48-7fdc-41d7-8743-b4d3163d35e6",
+      "name": "Medication & Follow-up Reminder",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        208
+      ],
+      "webhookId": "3200aebe-f819-4a00-93c1-f6c93a2ead89"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "patients",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "=patient_id",
+              "condition": "eq",
+              "keyValue": "={{ $json['Patient ID'] }}"
+            }
+          ]
+        }
+      },
+      "id": "bd1ea467-08ef-48e8-ae0c-f9c40213f394",
+      "name": "Get Patient",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        208
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e52d3743-61b2-4f18-aa2e-c8b6f46bd4a9",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f3297260-2cdf-4830-9feb-6a42c4e6a870",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "medical_reports",
+        "limit": 1,
+        "orderBy": "uploaded_at.desc",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get Patient').item.json.patient_id }}"
+            }
+          ]
+        }
+      },
+      "id": "41982546-e4d9-4b08-9a35-29a561fec2af",
+      "name": "Get Latest Medical Report",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        672,
+        112
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI Healthcare Assistant working in a hospital.\n\nYour job is NOT to prescribe medicines.\n\nInstead, generate a patient care plan based ONLY on the available medical report.\n\nPatient Details\n\nName:\n{{ $('Get Patient').item.json.full_name }}\n\nAge:\n{{ $('Get Patient').item.json.age }}\n\nGender:\n{{ $('Get Patient').item.json.gender }}\n\nDiagnosis:\n{{ $('Get Latest Medical Report').item.json.diagnosis }}\n\nSeverity:\n{{ $('Get Latest Medical Report').item.json.severity }}\n\nMedical Report Summary:\n{{ $('Get Latest Medical Report').item.json.ai_summary }}\n\nRecommendations:\n{{ $('Get Latest Medical Report').item.json.recommendations }}\n\nDepartment:\n{{ $('Get Latest Medical Report').item.json.department }}\n\nDoctor Notes:\n{{ $('Medication & Follow-up Reminder').item.json[\"Doctor Notes\"] }}\n\nFollow-up Date:\n{{ $('Medication & Follow-up Reminder').item.json[\"Follow-up Date\"] }}\n\nIMPORTANT\n\nNever prescribe medicine.\n\nNever invent diseases.\n\nUse only the information provided.\n\nReturn ONLY JSON.\n\n{\n\"care_plan\":\"\",\n\"diet\":\"\",\n\"exercise\":\"\",\n\"precautions\":\"\",\n\"follow_up_date\":\"\",\n\"doctor_note\":\"\",\n\"patient_message\":\"\"\n}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a professional hospital medical assistant. Always return valid JSON only. Never include markdown. Never include explanations."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "8d193d34-4a5e-4ad0-baaa-a46b0422e8fb",
+      "name": "Basic LLM Chain",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        896,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
+        "options": {
+          "maxOutputTokens": 1024,
+          "temperature": 0.2
+        }
+      },
+      "id": "b541bc64-1911-4987-8749-d3affd2d5f71",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        336
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VCUQdZ1UbtfaEOTx",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Get Patient').item.json.email }}",
+        "subject": "Medication Reminder Failed",
+        "message": "<h2>AI Hospital Management System</h2>  <p>Dear Patient,</p>  <p>We could not generate your medication reminder because your Patient ID was not found in our hospital database.</p>  <p>Please contact the hospital reception or complete your registration first.</p>  <hr>  <p><b>AI Hospital Management System</b></p>",
+        "options": {}
+      },
+      "id": "ceded591-e1ae-4b66-8f20-e1d88913b485",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        304
+      ],
+      "webhookId": "1a384ede-9f96-4026-836f-b810f5302247",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Get the text returned by Basic LLM Chain\nconst response = $json.text;\n\n// Remove markdown if present\nconst cleaned = response\n  .replace(/```json/g, \"\")\n  .replace(/```/g, \"\")\n  .trim();\n\n// Convert JSON string to JavaScript object\nconst ai = JSON.parse(cleaned);\n\n// Return parsed object\nreturn {\n  json: ai\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        112
+      ],
+      "id": "ab7f59dd-ab17-42aa-bbd7-6799795070e6",
+      "name": "Parse Care Plan JSON"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Create a unique reminder ID\nconst reminderId =\n  \"REM_\" +\n  Date.now() +\n  \"_\" +\n  Math.random()\n    .toString(36)\n    .substring(2,8)\n    .toUpperCase();\n\n// Keep all previous AI fields\nreturn {\n  json: {\n    ...$json,\n    reminder_id: reminderId,\n    status: \"Pending Approval\",\n    created_at: new Date().toISOString()\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        336
+      ],
+      "id": "a4b3b1e7-c2c9-40a5-8b4a-67d94f4d8f1f",
+      "name": "Generate Reminder ID"
+    },
+    {
+      "parameters": {
+        "tableId": "medication_reminders",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "reminder_id",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.reminder_id }}"
+            },
+            {
+              "fieldId": "patient_id",
+              "fieldValue": "={{ $('Get Patient').item.json.patient_id }}"
+            },
+            {
+              "fieldId": "patient_name",
+              "fieldValue": "={{ $('Get Patient').item.json.full_name }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Get Patient').item.json.email }}"
+            },
+            {
+              "fieldId": "care_plan",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.care_plan }}"
+            },
+            {
+              "fieldId": "diet",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.diet }}"
+            },
+            {
+              "fieldId": "exercise",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.exercise }}"
+            },
+            {
+              "fieldId": "precautions",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.precautions }}"
+            },
+            {
+              "fieldId": "follow_up_date",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.follow_up_date }}"
+            },
+            {
+              "fieldId": "doctor_notes",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.doctor_note }}"
+            },
+            {
+              "fieldId": "patient_message",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.patient_message }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.status }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $('Generate Reminder ID').item.json.created_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        560
+      ],
+      "id": "3117293b-949f-45e2-8dd1-6d285521f630",
+      "name": "Save Reminder",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "geetikaboddapati@gmail.com",
+        "subject": "🏥 Doctor Approval Required | AI Care Plan Generated",
+        "message": "=<h2>🏥 AI Hospital Management System</h2>  <p>Hello Doctor,</p>  <p> A new AI-generated Patient Care Plan has been created and requires your approval. </p>  <hr>  <h3>Patient Information</h3>  <b>Reminder ID:</b><br> {{ $('Generate Reminder ID').item.json.reminder_id }}  <br><br>  <b>Patient ID:</b><br> {{ $('Get Patient').item.json.patient_id }}  <br><br>  <b>Patient Name:</b><br> {{ $('Get Patient').item.json.full_name }}  <br><br>  <b>Email:</b><br> {{ $('Get Patient').item.json.email }}  <hr>  <h3>AI Generated Care Plan</h3>  <b>Care Plan</b>  <p> {{ $('Generate Reminder ID').item.json.care_plan }} </p>  <b>Diet Advice</b>  <p> {{ $('Generate Reminder ID').item.json.diet }} </p>  <b>Exercise</b>  <p> {{ $('Generate Reminder ID').item.json.exercise }} </p>  <b>Precautions</b>  <p> {{ $('Generate Reminder ID').item.json.precautions }} </p>  <b>Follow-up Date</b>  <p> {{ $('Generate Reminder ID').item.json.follow_up_date }} </p>  <b>Doctor Note</b>  <p> {{ $('Generate Reminder ID').item.json.doctor_note }} </p>  <hr>  <h3>Status</h3>  <p> <b> {{ $('Generate Reminder ID').item.json.status }} </b> </p>  <hr>  <p>  <hr>  <p style=\"color:gray\"> AI Hospital Management System<br> Generated automatically using n8n + Gemini AI </p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        560
+      ],
+      "id": "415ccaa5-4e9c-428d-aec1-d76fb4e825a0",
+      "name": "Notify Doctor",
+      "webhookId": "204b6024-ea1d-45a0-857e-40e95ceae819",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Medication & Follow-up Reminder": {
+      "main": [
+        [
+          {
+            "node": "Get Patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Patient": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Latest Medical Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Latest Medical Report": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Parse Care Plan JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Care Plan JSON": {
+      "main": [
+        [
+          {
+            "node": "Generate Reminder ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Reminder ID": {
+      "main": [
+        [
+          {
+            "node": "Save Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Reminder": {
+      "main": [
+        [
+          {
+            "node": "Notify Doctor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "88907055-d8f4-4a66-b915-15ca4ea5d238",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "580cae93cc976494b5e49db5dbb606b8783cb9a5851e5460e7265cca86def0db"
+  },
+  "nodeGroups": [],
+  "id": "9yDbIDl6i3ra1mmS",
+  "tags": []
+}

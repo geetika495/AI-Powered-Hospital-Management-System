@@ -1,0 +1,565 @@
+{
+  "name": "Hospital - Patient Registration",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "🏥 AI Hospital Management System",
+        "formDescription": "Please fill in your details to register as a patient.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "fieldName": "full_name",
+              "placeholder": "Enter your full name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Age",
+              "fieldType": "number",
+              "fieldName": "age",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Gender",
+              "fieldType": "dropdown",
+              "fieldName": "gender",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Female"
+                  },
+                  {
+                    "option": "Male"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "fieldName": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone Number",
+              "fieldType": "number",
+              "fieldName": "phone",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Address",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Blood Group",
+              "fieldType": "dropdown",
+              "fieldName": "blood_group",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "A+ "
+                  },
+                  {
+                    "option": "A-"
+                  },
+                  {
+                    "option": "B+"
+                  },
+                  {
+                    "option": "B-"
+                  },
+                  {
+                    "option": "AB+"
+                  },
+                  {
+                    "option": "AB-"
+                  },
+                  {
+                    "option": "O+"
+                  },
+                  {
+                    "option": "O-"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Emergency Contact",
+              "fieldType": "number",
+              "fieldName": "emergency_contact"
+            },
+            {
+              "fieldLabel": "Symptoms",
+              "fieldType": "textarea",
+              "fieldName": "symptoms"
+            },
+            {
+              "fieldLabel": "Duration",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "1 day"
+                  },
+                  {
+                    "option": "2-3 days"
+                  },
+                  {
+                    "option": "1 week"
+                  },
+                  {
+                    "option": "More than 1 week"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Pain Level",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "1"
+                  },
+                  {
+                    "option": "2"
+                  },
+                  {
+                    "option": "3"
+                  },
+                  {
+                    "option": "4"
+                  },
+                  {
+                    "option": "5"
+                  },
+                  {
+                    "option": "6"
+                  },
+                  {
+                    "option": "7"
+                  },
+                  {
+                    "option": "8"
+                  },
+                  {
+                    "option": "9"
+                  },
+                  {
+                    "option": "10"
+                  }
+                ]
+              }
+            },
+            {
+              "fieldLabel": "Medical History",
+              "fieldType": "textarea",
+              "fieldName": "medical_history"
+            },
+            {
+              "fieldLabel": "Allergies",
+              "fieldName": "allergies"
+            },
+            {
+              "fieldLabel": "Current Medications",
+              "fieldName": "medications"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        -960,
+        112
+      ],
+      "id": "d1c33d23-af73-4e9f-b921-4db18dc5167e",
+      "name": "On form submission",
+      "webhookId": "dbc02715-c8e2-4cc3-89ad-cc30b23daac9"
+    },
+    {
+      "parameters": {
+        "tableId": "patients",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "full_name",
+              "fieldValue": "={{$node[\"On form submission\"].json.full_name}}"
+            },
+            {
+              "fieldId": "age",
+              "fieldValue": "={{$node[\"On form submission\"].json.age}}"
+            },
+            {
+              "fieldId": "gender",
+              "fieldValue": "={{$node[\"On form submission\"].json.gender}}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{$node[\"On form submission\"].json.email}}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{$node[\"On form submission\"].json.phone}}"
+            },
+            {
+              "fieldId": "address",
+              "fieldValue": "={{$node[\"On form submission\"].json.Address}}"
+            },
+            {
+              "fieldId": "blood_group",
+              "fieldValue": "={{$node[\"On form submission\"].json.blood_group}}"
+            },
+            {
+              "fieldId": "emergency_contact",
+              "fieldValue": "={{$node[\"On form submission\"].json.emergency_contact}}"
+            },
+            {
+              "fieldId": "patient_id",
+              "fieldValue": "={{$node[\"Code in JavaScript\"].json.patient_id}}"
+            },
+            {
+              "fieldId": "symptoms",
+              "fieldValue": "={{$node[\"On form submission\"].json.symptoms}}"
+            },
+            {
+              "fieldId": "duration",
+              "fieldValue": "={{$node[\"On form submission\"].json.Duration}}"
+            },
+            {
+              "fieldId": "medical_history",
+              "fieldValue": "={{$node[\"On form submission\"].json.medical_history}}"
+            },
+            {
+              "fieldId": "allergies",
+              "fieldValue": "={{$node[\"On form submission\"].json.allergies}}"
+            },
+            {
+              "fieldId": "pain_level",
+              "fieldValue": "={{$node[\"On form submission\"].json[\"Pain Level\"]}}"
+            },
+            {
+              "fieldId": "medications",
+              "fieldValue": "={{$node[\"On form submission\"].json.medications}}"
+            },
+            {
+              "fieldId": "ai_analysis",
+              "fieldValue": "={{$node[\"On form submission\"].json.medications}}"
+            },
+            {
+              "fieldId": "possible_condition",
+              "fieldValue": "={{ $json.possible_condition }}"
+            },
+            {
+              "fieldId": "severity",
+              "fieldValue": "={{ $json.severity }}"
+            },
+            {
+              "fieldId": "recommended_department",
+              "fieldValue": "={{ $json.recommended_department }}"
+            },
+            {
+              "fieldId": "ai_analysis",
+              "fieldValue": "={{ $json.ai_analysis }}"
+            },
+            {
+              "fieldId": "recommendation",
+              "fieldValue": "={{ $json.recommendation }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        240,
+        208
+      ],
+      "id": "325280af-7829-4905-9409-84cd43cd1158",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const randomNumber = Math.floor(1000 + Math.random() * 9000);\n\nreturn [{\n  json: {\n    patient_id: `PAT${randomNumber}`,\n    full_name: $json.full_name,\n    age: $json.age,\n    gender: $json.gender,\n    email: $json.email,\n    phone: $json.phone,\n    Address: $json.Address,\n    blood_group: $json.blood_group,\n    emergency_contact: $json.emergency_contact\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        208
+      ],
+      "id": "9c86fc35-b163-4b6e-82fe-94375aa82ff6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "Hospital Registration Successful",
+        "message": "=<h2>🏥 Hospital Registration Successful</h2>\n\n<p>Hello <b>{{$json.full_name}}</b>,</p>\n\n<p>Your registration has been completed successfully.</p>\n\n<p><b>Patient ID:</b> {{$json.patient_id}}</p>\n\n<hr>\n\n<h3>🤖 AI Preliminary Health Assessment</h3>\n\n<p><b>Possible Condition:</b> {{$json.possible_condition}}</p>\n\n<p><b>Severity:</b> {{$json.severity}}</p>\n\n<p><b>Recommended Department:</b> {{$json.recommended_department}}</p>\n\n<p><b>Recommendation:</b> {{$json.recommendation}}</p>\n\n<p><i>This assessment is AI-generated and is not a medical diagnosis.</i></p>\n\n<hr>\n\n<p><b>📅 Book Your Appointment</b></p>\n\n<p>\nTo schedule your doctor appointment, please click the link below:\n</p>\n\n<p>\n<a href=\"YOUR_APPOINTMENT_LINK\">\nhttps://geetika045.app.n8n.cloud/form/b8f75dc7-0457-4eb3-a90c-16be56e43f02\n</a>\n</p>\n\n<hr>\n\n<p>\nRegards,<br>\n<b>Hospital Management Team</b>\n</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        208
+      ],
+      "id": "b851254d-8b10-408e-b771-55a56fd4066d",
+      "name": "Send a message",
+      "webhookId": "7a6e1b42-553d-4923-855d-f09a3bad0fe4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "patients",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "email",
+              "condition": "eq",
+              "keyValue": "={{$('On form submission').item.json.email}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        112
+      ],
+      "id": "eac55540-6f4a-4a61-9738-4f678d41a453",
+      "name": "Get many rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "da8934dd-6000-4623-9c89-027f83acf73d",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -640,
+        112
+      ],
+      "id": "3b07dbe4-5043-49f8-a762-3a3c8f739d61",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{$('On form submission').item.json.email}}",
+        "subject": "Already Registered",
+        "emailType": "text",
+        "message": "=Hello {{$('On form submission').item.json.full_name}},\n\nOur records show that you are already registered.\n\nNo new patient record has been created.\n\nThank you.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -416,
+        16
+      ],
+      "id": "20e5afc3-3e2e-4512-bfc6-1333f114773b",
+      "name": "Send a message1",
+      "webhookId": "107c91b6-ad41-4cb6-a327-03d45d9778d8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an AI hospital triage assistant.\n\nYou are NOT a doctor and must NOT provide a medical diagnosis.\n\nBased on the patient's information, provide a preliminary assessment.\n\nPatient Details:\n\nName: {{$('On form submission').item.json.full_name}}\n\nAge: {{$('On form submission').item.json.age}}\n\nGender: {{$('On form submission').item.json.gender}}\n\nSymptoms:\n{{$('On form submission').item.json.symptoms}}\n\nDuration:\n{{$('On form submission').item.json.duration}}\n\nPain Level:\n{{$('On form submission').item.json.pain_level}}\n\nMedical History:\n{{$('On form submission').item.json.medical_history}}\n\nAllergies:\n{{$('On form submission').item.json.allergies}}\n\nCurrent Medications:\n{{$('On form submission').item.json.medications}}\n\nReturn ONLY valid JSON in this format:\n\n{\n  \"possible_condition\": \"\",\n  \"severity\": \"Low | Medium | High\",\n  \"recommended_department\": \"\",\n  \"recommendation\": \"\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -224,
+        208
+      ],
+      "id": "0f66795f-3341-4a1e-9283-fdbf58320cd7",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VCUQdZ1UbtfaEOTx",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai = JSON.parse($node[\"Message a model\"].json.content.parts[0].text);\n\n// Generate a unique patient ID\nconst patientId = \"PAT\" + Date.now() + Math.floor(Math.random() * 1000);\n\n// Original form data\nconst form = $node[\"On form submission\"].json;\n\nreturn [\n  {\n    json: {\n      patient_id: patientId,\n\n      full_name: form.full_name,\n      age: form.age,\n      gender: form.gender,\n      email: form.email,\n      phone: form.phone,\n      address: form.Address,\n      blood_group: form.blood_group,\n      emergency_contact: form.emergency_contact,\n\n      symptoms: form.symptoms,\n      duration: form.Duration,\n      pain_level: form.Pain_Level,\n      medical_history: form.medical_history,\n      allergies: form.allergies,\n      medications: form.medications,\n\n      possible_condition: ai.possible_condition,\n      severity: ai.severity,\n      recommended_department: ai.recommended_department,\n      recommendation: ai.recommendation,\n      ai_analysis: JSON.stringify(ai)\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        208
+      ],
+      "id": "34012557-7b75-4956-aed0-358496d29e8e",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0141c8ad-2dda-4b35-b1e3-fd316787675e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "580cae93cc976494b5e49db5dbb606b8783cb9a5851e5460e7265cca86def0db"
+  },
+  "nodeGroups": [],
+  "id": "m2QSBirZLoaocMiE",
+  "tags": []
+}

@@ -1,0 +1,452 @@
+{
+  "name": "Medical Report Upload + AI Analysis",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "AI Medical Report Upload & Analysis",
+        "formDescription": "Upload your medical report for AI-powered analysis. The system will summarize the report, identify abnormalities, recommend the appropriate specialist, and email the results.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Patient ID",
+              "placeholder": "PAT1234",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Report Type",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Blood Test "
+                  },
+                  {
+                    "option": "CBC"
+                  },
+                  {
+                    "option": "Urine Test"
+                  },
+                  {
+                    "option": "MRI"
+                  },
+                  {
+                    "option": "CT Scan"
+                  },
+                  {
+                    "option": "X-Ray"
+                  },
+                  {
+                    "option": "ECG"
+                  },
+                  {
+                    "option": "Prescription"
+                  },
+                  {
+                    "option": "Ultrasound"
+                  },
+                  {
+                    "option": "Lab Report"
+                  },
+                  {
+                    "option": "Other"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Upload Medical Report",
+              "fieldType": "file",
+              "fieldName": "Upload_Medical_Report"
+            },
+            {
+              "fieldLabel": "Additional Symptoms / Notes",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "179be937-a127-44b5-81a1-69e004842a93",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        96
+      ],
+      "webhookId": "3b7cae77-08c7-471a-8494-abc7d73ec4a3"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "Upload_Medical_Report",
+        "options": {}
+      },
+      "id": "5ff0c5ee-fc9e-453b-bd68-0b8b9f5657a4",
+      "name": "Extract from File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an experienced medical AI assistant helping doctors perform a preliminary assessment.\n\nIMPORTANT:\n- This is only a preliminary AI assessment.\n- Do NOT claim to have interpreted the uploaded PDF.\n- Base your analysis ONLY on the patient information provided below.\n- If information is missing, clearly mention that it is unavailable.\n- Never fabricate findings.\n- Return ONLY valid JSON.\n- Do NOT include markdown or ```json.\n\nPATIENT DETAILS\n\nPatient Name:\n{{ $('Get Patient').item.json.full_name }}\n\nAge:\n{{ $('Get Patient').item.json.age }}\n\nGender:\n{{ $('Get Patient').item.json.gender }}\n\nBlood Group:\n{{ $('Get Patient').item.json.blood_group }}\n\nMedical History:\n{{ $('Get Patient').item.json.medical_history }}\n\nAllergies:\n{{ $('Get Patient').item.json.allergies }}\n\nCurrent Medications:\n{{ $('Get Patient').item.json.medications }}\n\nPrevious Symptoms:\n{{ $('Get Patient').item.json.symptoms }}\n\nPrevious AI Assessment:\n\n\nReport Type:\n{{ $('On form submission').item.json[\"Report Type\"] }}\n\nCurrent Symptoms / Notes:\n{{ $('On form submission').item.json[\"Additional Symptoms / Notes\"] }}\n\nProvide a preliminary assessment in this EXACT JSON format:\n\n{\n  \"summary\": \"\",\n  \"possible_condition\": \"\",\n  \"severity\": \"\",\n  \"recommended_department\": \"\",\n  \"recommended_tests\": [\n    \"\",\n    \"\",\n    \"\"\n  ],\n  \"recommendation\": \"\"\n}\n\nRules:\n- summary should be 2-4 sentences.\n- possible_condition should be the most likely condition based only on the available information.\n- severity must be one of:\n  Low\n  Moderate\n  High\n- recommended_department should be the most appropriate department.\n- recommended_tests should contain 3 recommended investigations.\n- recommendation should be a short paragraph explaining the next steps.\n- If information is insufficient, clearly state that additional clinical evaluation is required.\n- Return ONLY the JSON object."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "295d66ac-5ca3-41f0-8bd6-17b3bf9c3129",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        96
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VCUQdZ1UbtfaEOTx",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Read Gemini response\nconst response = $json.content.parts[0].text;\n\n// Remove markdown if present\nconst cleaned = response\n  .replace(/```json/g, \"\")\n  .replace(/```/g, \"\")\n  .trim();\n\nlet ai;\n\ntry {\n  ai = JSON.parse(cleaned);\n} catch (e) {\n  // If Gemini didn't return JSON, save the text instead\n  ai = {\n    summary: cleaned,\n    possible_condition: \"\",\n    severity: \"\",\n    recommended_department: \"\",\n    recommended_tests: [],\n    recommendation: \"\"\n  };\n}\n\nreturn {\n  summary: ai.summary,\n  possible_condition: ai.possible_condition,\n  severity: ai.severity,\n  recommended_department: ai.recommended_department,\n  recommended_tests: ai.recommended_tests,\n  recommendation: ai.recommendation\n};"
+      },
+      "id": "b6656a9b-31ee-4cbc-aa45-4d7fecca5fd1",
+      "name": "Code in JavaScript",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Generate a unique report ID\n\nconst reportId =\n  \"REP_\" +\n  Date.now() +\n  \"_\" +\n  Math.floor(Math.random() * 1000000);\n\nreturn {\n  json: {\n    ...$json,\n    report_id: reportId,\n  },\n};"
+      },
+      "id": "119728a5-455a-4c36-9f93-612f993fcd5e",
+      "name": "Generate Report ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "medical_reports",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "report_id",
+              "fieldValue": "={{ $json.report_id }}"
+            },
+            {
+              "fieldId": "patient_id",
+              "fieldValue": "={{ $('On form submission').item.json['Patient ID'] }}"
+            },
+            {
+              "fieldId": "patient_name",
+              "fieldValue": "={{$node[\"Get Patient\"].json.full_name}}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{$node[\"Get Patient\"].json.email}}"
+            },
+            {
+              "fieldId": "report_name",
+              "fieldValue": "={{$node[\"On form submission\"].json[\"Upload Medical Report\"][0].filename}}"
+            },
+            {
+              "fieldId": "extracted_text",
+              "fieldValue": "={{ $('Extract from File').item.json.text }}"
+            },
+            {
+              "fieldId": "ai_summary",
+              "fieldValue": "={{$node[\"Code in JavaScript\"].json.summary}}"
+            },
+            {
+              "fieldId": "abnormalities",
+              "fieldValue": "=\"None detected\""
+            },
+            {
+              "fieldId": "diagnosis",
+              "fieldValue": "={{$node[\"Code in JavaScript\"].json.possible_condition}}"
+            },
+            {
+              "fieldId": "severity",
+              "fieldValue": "={{ $('Code in JavaScript').item.json.severity }}"
+            },
+            {
+              "fieldId": "recommendations",
+              "fieldValue": "={{ $('Code in JavaScript').item.json.recommendation }}"
+            },
+            {
+              "fieldId": "department",
+              "fieldValue": "={{$node[\"Code in JavaScript\"].json.recommended_department}}"
+            },
+            {
+              "fieldId": "uploaded_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "4f024318-d9be-4a7c-978d-168eec34a406",
+      "name": "Create a row",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        96
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.email }}",
+        "subject": "AI Medical Report Analysis",
+        "message": "=<h2>Medical Report Analysis</h2>\n\n<p><b>Patient:</b> {{$node[\"Get Patient\"].json.full_name}}</p>\n\n<h3>Summary</h3>\n<p>{{$node[\"Code in JavaScript\"].json.summary}}</p>\n\n<h3>Possible Condition</h3>\n<p>{{$node[\"Code in JavaScript\"].json.possible_condition}}</p>\n\n<h3>Severity</h3>\n<p>{{$node[\"Code in JavaScript\"].json.severity}}</p>\n\n<h3>Recommended Department</h3>\n<p>{{$node[\"Code in JavaScript\"].json.recommended_department}}</p>\n\n<h3>Recommendations</h3>\n<p>{{$node[\"Code in JavaScript\"].json.recommendation}}</p>\n\n<h3>Recommended Tests</h3>\n\n<ul>\n<li>{{$node[\"Code in JavaScript\"].json.recommended_tests[0]}}</li>\n<li>{{$node[\"Code in JavaScript\"].json.recommended_tests[1]}}</li>\n<li>{{$node[\"Code in JavaScript\"].json.recommended_tests[2]}}</li>\n</ul>\n\n<hr>\n\n<p><b>This AI report is preliminary and should not replace consultation with a licensed healthcare professional.</b></p>",
+        "options": {}
+      },
+      "id": "4d1d6387-d1ac-4c75-902f-fbb10ad043c0",
+      "name": "Send a message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1568,
+        96
+      ],
+      "webhookId": "e3d8a878-3683-4c5a-8504-bd7d2f4fd946",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GgyU6r3L2SuG6grQ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "patients",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "patient_id",
+              "condition": "eq",
+              "keyValue": "={{ $json[\"Patient ID\"] }}"
+            }
+          ]
+        }
+      },
+      "id": "2e19bd3c-64cf-4fd6-9e0d-17d20c9cabf1",
+      "name": "Get Patient",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        256,
+        320
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "bufYaHkm8IwaVBHC",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6809456c-35a9-49d9-b1e8-8c33234230a9",
+              "leftValue": "={{ $input.all().length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b340c10d-63ef-42e9-a970-69b6f1519b72",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        512,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        480,
+        96
+      ],
+      "id": "8c2636e1-e0a9-48af-b5b6-cf48a914ba84",
+      "name": "Merge"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Patient",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Generate Report ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Report ID": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Patient": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        []
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c42363e5-4843-48c2-bd0c-c18cece88919",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "580cae93cc976494b5e49db5dbb606b8783cb9a5851e5460e7265cca86def0db"
+  },
+  "nodeGroups": [],
+  "id": "Utr1N6vaHinjEXVn",
+  "tags": []
+}
